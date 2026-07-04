@@ -1,0 +1,6 @@
+#!/bin/sh
+# Remove the CLI symlink; leave configuration and data cleanup to DSM.
+if [ -L /usr/local/bin/nomad ]; then
+    rm -f /usr/local/bin/nomad
+fi
+exit 0

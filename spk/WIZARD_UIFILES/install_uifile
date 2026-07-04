@@ -1,0 +1,134 @@
+[
+  {
+    "step_title": "Nomad cluster configuration",
+    "items": [
+      {
+        "type": "singleselect",
+        "desc": "How should this NAS participate in the Nomad cluster?",
+        "subitems": [
+          {
+            "key": "wizard_topology_server_client",
+            "desc": "Server + client — standalone single-node cluster that other nodes may join",
+            "defaultValue": true
+          },
+          {
+            "key": "wizard_topology_client",
+            "desc": "Client only — run workloads as part of an existing cluster",
+            "defaultValue": false
+          }
+        ]
+      },
+      {
+        "type": "textfield",
+        "desc": "The Nomad region this node belongs to. Servers that federate together must share a region.",
+        "subitems": [
+          {
+            "key": "wizard_region",
+            "desc": "Region name",
+            "defaultValue": "global",
+            "validator": {
+              "allowBlank": false
+            }
+          }
+        ]
+      },
+      {
+        "type": "textfield",
+        "desc": "The Nomad datacenter this node belongs to.",
+        "subitems": [
+          {
+            "key": "wizard_datacenter",
+            "desc": "Datacenter name",
+            "defaultValue": "dc1",
+            "validator": {
+              "allowBlank": false
+            }
+          }
+        ]
+      },
+      {
+        "type": "textfield",
+        "desc": "Comma-separated addresses of Nomad servers to join. Required for client-only mode; optional for a server that should federate with existing servers.",
+        "subitems": [
+          {
+            "key": "wizard_join_addresses",
+            "desc": "Server addresses (e.g. 10.0.0.10, nomad-1.example.ts.net)",
+            "defaultValue": "",
+            "validator": {
+              "allowBlank": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "step_title": "Nomad network configuration",
+    "items": [
+      {
+        "type": "singleselect",
+        "desc": "Which address should Nomad advertise to other cluster members? Pick the Tailscale option to peer over your tailnet.",
+        "subitems": [
+          {
+            "key": "wizard_iface_eth0",
+            "desc": "eth0 — primary LAN interface",
+            "defaultValue": true
+          },
+          {
+            "key": "wizard_iface_eth1",
+            "desc": "eth1",
+            "defaultValue": false
+          },
+          {
+            "key": "wizard_iface_eth2",
+            "desc": "eth2",
+            "defaultValue": false
+          },
+          {
+            "key": "wizard_iface_tailscale",
+            "desc": "Tailscale (tailscale0)",
+            "defaultValue": false
+          },
+          {
+            "key": "wizard_iface_custom",
+            "desc": "Custom IP address — enter it below",
+            "defaultValue": false
+          }
+        ]
+      },
+      {
+        "type": "textfield",
+        "desc": "Custom IP address to advertise. Only used when \"Custom IP address\" is selected above.",
+        "subitems": [
+          {
+            "key": "wizard_custom_ip",
+            "desc": "IP address (e.g. 192.168.1.20)",
+            "defaultValue": "",
+            "validator": {
+              "allowBlank": true
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "step_title": "Nomad storage configuration",
+    "items": [
+      {
+        "type": "textfield",
+        "desc": "Optional. Absolute path on a Synology volume where Nomad's built-in \"mkdir\" plugin creates dynamic host volumes on demand (e.g. /volume1/nomad/host-volumes). Leave blank to use the package data directory. For a path on a Synology volume, grant the 'nomad' system internal user Read/Write on the folder (Control Panel > Shared Folder > Permissions) so Nomad can create volumes there without privileged mode; see the README.",
+        "subitems": [
+          {
+            "key": "wizard_host_volumes_dir",
+            "desc": "Dynamic host volumes directory",
+            "defaultValue": "",
+            "validator": {
+              "allowBlank": true
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

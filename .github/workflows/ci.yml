@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shellcheck package scripts
+        run: |
+          shellcheck --shell=sh spk/scripts/* spk/package/share/*.sh
+          shellcheck build.sh
+
+      - name: Validate JSON and wizard definitions
+        run: |
+          jq -e . spk/conf/privilege > /dev/null
+          jq -e . spk/WIZARD_UIFILES/install_uifile > /dev/null
+
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build SPK
+        run: ./build.sh "$(cat VERSION)" "${{ matrix.arch }}"
+
+      - name: Inspect SPK
+        run: |
+          spk=(dist/*.spk)
+          echo "==> Contents of ${spk[0]}"
+          tar -tvf "${spk[0]}"
+          echo "==> INFO"
+          tar -xOf "${spk[0]}" INFO
+          tar -xOf "${spk[0]}" INFO | grep -q "^arch=\"${{ matrix.arch }}\""
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spk-${{ matrix.arch }}
+          path: dist/*.spk

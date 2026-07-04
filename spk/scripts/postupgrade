@@ -1,0 +1,8 @@
+#!/bin/sh
+# Configuration and data persist outside the target directory, so there is
+# nothing to migrate. Re-apply privileged mode if the user opted in before this
+# upgrade replaced the binary (no-op unless run as root; the root boot task is
+# the reliable re-apply on this DSM).
+TARGET="${SYNOPKG_PKGDEST:-/var/packages/${SYNOPKG_PKGNAME:-nomad}/target}"
+"${TARGET}/share/enable-privileges.sh" reapply 2> /dev/null || true
+exit 0

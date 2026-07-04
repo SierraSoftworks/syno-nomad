@@ -1,0 +1,30 @@
+#!/bin/sh
+# Prepare persistent directories and render the initial configuration from the
+# install wizard's answers (only when no config exists, so user edits always
+# survive upgrades and reinstalls).
+#
+# On DSM 7.2 lifecycle scripts run as the unprivileged package user, so this
+# only does what that user can. Privilege escalation for the task drivers is a
+# separate, opt-in root task (see share/enable-privileges.sh and the README).
+
+PKG_ROOT="/var/packages/${SYNOPKG_PKGNAME:-nomad}"
+TARGET="${SYNOPKG_PKGDEST:-${PKG_ROOT}/target}"
+ETC="${PKG_ROOT}/etc"
+VAR="${PKG_ROOT}/var"
+
+mkdir -p "${ETC}/conf.d" "${VAR}/data" "${VAR}/logs" "${VAR}/run"
+
+if [ ! -f "${ETC}/nomad.hcl" ]; then
+    if ! "${TARGET}/share/generate-config.sh" "${ETC}" >> "${VAR}/logs/install.log" 2>&1; then
+        echo "Failed to generate ${ETC}/nomad.hcl; see ${VAR}/logs/install.log." \
+            >> "${SYNOPKG_TEMP_LOGFILE:-/dev/stderr}"
+        exit 1
+    fi
+fi
+
+# Re-apply privileged mode if the user opted in before an upgrade replaced the
+# binary. This is a no-op unless run as root (on this DSM lifecycle scripts are
+# not, so the root boot task is what actually re-applies it).
+"${TARGET}/share/enable-privileges.sh" reapply 2> /dev/null || true
+
+exit 0

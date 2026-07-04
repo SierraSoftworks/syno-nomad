@@ -1,0 +1,19 @@
+#!/bin/sh
+# Validate install wizard answers before DSM extracts the package. Wizard
+# variables are only present on a fresh install.
+[ "${SYNOPKG_PKG_STATUS:-}" = "INSTALL" ] || exit 0
+
+fail() {
+    echo "$*" >> "${SYNOPKG_TEMP_LOGFILE:-/dev/stderr}"
+    exit 1
+}
+
+if [ "${wizard_topology_client:-false}" = "true" ] && [ -z "${wizard_join_addresses:-}" ]; then
+    fail "Client-only mode requires at least one Nomad server address to join."
+fi
+
+if [ "${wizard_iface_custom:-false}" = "true" ] && [ -z "${wizard_custom_ip:-}" ]; then
+    fail "A custom IP address was selected but no address was entered."
+fi
+
+exit 0

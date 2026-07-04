@@ -1,0 +1,144 @@
+name: Release
+
+on:
+  schedule:
+    # Check for new Nomad releases daily.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Nomad version to package (defaults to the latest stable release)"
+        required: false
+      revision:
+        description: "Package revision (bump for packaging-only fixes to an already-released Nomad version)"
+        required: false
+        default: "1"
+
+permissions:
+  contents: write
+
+concurrency: release
+
+jobs:
+  check:
+    name: Check for new Nomad release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      revision: ${{ steps.check.outputs.revision }}
+      tag: ${{ steps.check.outputs.tag }}
+      proceed: ${{ steps.check.outputs.proceed }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine target version
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION="$(curl -fsSL --retry 3 \
+              "https://api.releases.hashicorp.com/v1/releases/nomad?limit=20&license_class=oss" \
+              | jq -r '[.[] | select(.is_prerelease == false)][0].version')"
+          fi
+          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+            echo "Failed to determine the latest Nomad version" >&2
+            exit 1
+          fi
+
+          REVISION="${{ inputs.revision || '1' }}"
+          TAG="v${VERSION}"
+          if [ "$REVISION" != "1" ]; then
+            TAG="v${VERSION}-${REVISION}"
+          fi
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release ${TAG} already exists — nothing to do."
+            PROCEED=false
+          else
+            echo "Will package Nomad ${VERSION} as ${TAG} (revision ${REVISION})."
+            PROCEED=true
+          fi
+
+          {
+            echo "version=${VERSION}"
+            echo "revision=${REVISION}"
+            echo "tag=${TAG}"
+            echo "proceed=${PROCEED}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build (${{ matrix.arch }})
+    needs: check
+    if: needs.check.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build SPK
+        run: ./build.sh "${{ needs.check.outputs.version }}" "${{ matrix.arch }}" "${{ needs.check.outputs.revision }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spk-${{ matrix.arch }}
+          path: dist/*.spk
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [check, build]
+    if: needs.check.outputs.proceed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.check.outputs.version }}
+      REVISION: ${{ needs.check.outputs.revision }}
+      TAG: ${{ needs.check.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: spk-*
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd dist
+          sha256sum *.spk > SHA256SUMS
+
+      - name: Record packaged version
+        run: |
+          if [ "$(cat VERSION)" != "$VERSION" ]; then
+            echo "$VERSION" > VERSION
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -am "chore: update Nomad to ${VERSION}"
+            git push
+          fi
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Nomad ${VERSION} (package r${REVISION})" \
+            --notes "Synology DSM 7.2+ package for [HashiCorp Nomad ${VERSION}](https://github.com/hashicorp/nomad/blob/v${VERSION}/CHANGELOG.md).
+
+          Download the \`.spk\` matching your NAS architecture (\`x86_64\` for most plus-series models such as the DS923+, \`aarch64\` for ARM models) and install it via Package Center → Manual Install."
+
+      - name: Upload artifacts
+        uses: SierraSoftworks/gh-releases@v1.0.10
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release_tag: ${{ needs.check.outputs.tag }}
+          overwrite: "true"
+          files: |
+            dist/nomad-${{ needs.check.outputs.version }}-${{ needs.check.outputs.revision }}-x86_64.spk
+            dist/nomad-${{ needs.check.outputs.version }}-${{ needs.check.outputs.revision }}-aarch64.spk
+            dist/SHA256SUMS

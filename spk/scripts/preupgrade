@@ -1,0 +1,5 @@
+#!/bin/sh
+# Configuration (/var/packages/nomad/etc) and data (/var/packages/nomad/var)
+# live outside the package target directory and persist across upgrades, so
+# there is nothing to back up here.
+exit 0
