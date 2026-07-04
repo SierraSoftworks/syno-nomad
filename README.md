@@ -51,12 +51,19 @@ yours and upgrades never touch it:
 | `/var/packages/nomad/etc/nomad.hcl` | Main agent configuration (generated from wizard answers) |
 | `/var/packages/nomad/etc/conf.d/*.hcl` | Drop-in overrides, loaded after `nomad.hcl` |
 | `/var/packages/nomad/var/data` | Nomad data directory |
-| `/var/packages/nomad/var/logs/nomad.log` | Agent log (rotated) |
+| `/var/packages/nomad/var/logs/console.log` | Captured stderr of the current run |
+
+By default Nomad logs to **syslog** (`enable_syslog = true`,
+`syslog_facility = "LOCAL0"`), so its durable logs appear in DSM's **Log
+Center** / the system log rather than a rotated file. It also still writes to
+stderr, which the package captures to
+`/var/packages/nomad/var/logs/console.log` (truncated each launch) — the first
+place to look if the agent won't start. To log to a file instead, replace the
+`enable_syslog`/`syslog_facility` lines in `nomad.hcl` with `log_file` and
+`log_rotate_max_files`.
 
 After editing configuration, restart the package from Package Center (or
-`synopkg restart nomad` over SSH). Nomad's own output is captured to
-`/var/packages/nomad/var/logs/console.log`, which is the first place to look
-if the agent won't start.
+`synopkg restart nomad` over SSH).
 
 The `nomad` CLI is at `/var/packages/nomad/target/bin/nomad`. Enabling
 privileged mode (below) also symlinks it to `/usr/local/bin/nomad` for

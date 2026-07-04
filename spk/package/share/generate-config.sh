@@ -83,8 +83,11 @@ region     = "${REGION}"
 datacenter = "${DATACENTER}"
 data_dir   = "/var/packages/nomad/var/data"
 
-log_file             = "/var/packages/nomad/var/logs/nomad.log"
-log_rotate_max_files = 5
+# Send logs to syslog (DSM's Log Center / the system log) rather than a file.
+# Nomad still writes to stderr, which the package captures to
+# var/logs/console.log for quick inspection.
+enable_syslog   = true
+syslog_facility = "LOCAL0"
 
 # Listen on all interfaces, but advertise a single address to the cluster.
 # The advertise address may be a literal IP or a go-sockaddr template that is

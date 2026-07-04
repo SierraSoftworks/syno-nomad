@@ -11,7 +11,8 @@
 PKG_ROOT="/var/packages/nomad"
 VAR="${PKG_ROOT}/var"
 PIDFILE="${VAR}/run/nomad.pid"
-LOG="${VAR}/logs/nomad.log"
+# Nomad logs to syslog; the DSM "view log" button shows the captured stderr.
+LOG="${VAR}/logs/console.log"
 RUN="${PKG_ROOT}/target/share/run-nomad.sh"
 
 pid_running() {

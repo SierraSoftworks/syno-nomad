@@ -25,7 +25,9 @@ if [ -n "$iface" ]; then
     done
 fi
 
-echo "$(date '+%F %T'): launching nomad agent" >> "$CONSOLE" 2>/dev/null || true
+# Truncate on each launch: Nomad's durable logs go to syslog, so console.log
+# only needs to hold the current run's stderr.
+echo "$(date '+%F %T'): launching nomad agent" > "$CONSOLE" 2>/dev/null || true
 exec "$NOMAD" agent \
     -config "${ETC}/nomad.hcl" \
     -config "${ETC}/conf.d" \
