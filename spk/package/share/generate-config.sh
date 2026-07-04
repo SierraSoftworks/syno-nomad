@@ -19,6 +19,13 @@ DATACENTER="${wizard_datacenter:-dc1}"
 CLIENT_ONLY="${wizard_topology_client:-false}"
 JOIN_ADDRESSES="${wizard_join_addresses:-}"
 
+# /var/packages/nomad/var is a symlink onto the storage volume. Nomad's
+# alloc-directory security check rejects task log / filesystem access with
+# "Path escapes the alloc directory" when data_dir traverses a symlink, so
+# resolve it to the real path (e.g. /volume1/@appdata/nomad/data).
+VAR_REAL="$(readlink -f /var/packages/nomad/var 2>/dev/null || echo /var/packages/nomad/var)"
+DATA_DIR="${VAR_REAL}/data"
+
 # Optional base directory for dynamic host volumes (the built-in "mkdir"
 # plugin). Trim surrounding whitespace and require an absolute path.
 HOST_VOLUMES_DIR="$(printf '%s' "${wizard_host_volumes_dir:-}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
@@ -81,7 +88,7 @@ echo "$IFACE" > "$ETC/listen-interface"
 
 region     = "${REGION}"
 datacenter = "${DATACENTER}"
-data_dir   = "/var/packages/nomad/var/data"
+data_dir   = "${DATA_DIR}"
 
 # Send logs to syslog (DSM's Log Center / the system log) rather than a file.
 # Nomad still writes to stderr, which the package captures to
