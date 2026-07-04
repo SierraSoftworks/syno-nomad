@@ -12,7 +12,7 @@ TARGET="${SYNOPKG_PKGDEST:-${PKG_ROOT}/target}"
 ETC="${PKG_ROOT}/etc"
 VAR="${PKG_ROOT}/var"
 
-mkdir -p "${ETC}/conf.d" "${VAR}/data" "${VAR}/logs" "${VAR}/run"
+mkdir -p "${ETC}/conf.d" "${ETC}/cni" "${VAR}/data" "${VAR}/logs" "${VAR}/run"
 
 if [ ! -f "${ETC}/nomad.hcl" ]; then
     if ! "${TARGET}/share/generate-config.sh" "${ETC}" >> "${VAR}/logs/install.log" 2>&1; then

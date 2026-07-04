@@ -182,6 +182,30 @@ package data directory, which needs neither. The `mkdir` plugin does not
 enforce `capacity_min`/`capacity_max` — size is bounded only by the underlying
 Synology volume.
 
+### Bridge networking (CNI)
+
+The [CNI reference plugins](https://github.com/containernetworking/plugins)
+(v1.6.2) are bundled with the package at
+`/var/packages/nomad/target/cni/bin`, and the config points Nomad's
+`client { cni_path = "..." }` there — so Nomad's `bridge` network mode and CNI
+networks work without a root-owned `/opt/cni/bin` (which the unprivileged
+installer can't create). CNI network definitions (`*.conflist`) go in
+`cni_config_dir` at `/var/packages/nomad/etc/cni`, which persists across
+upgrades.
+
+```hcl
+# in a job's group block
+network {
+  mode = "bridge"
+  port "http" { to = 8080 }
+}
+```
+
+Bridge networking sets up network namespaces and iptables rules, so like the
+Docker and exec drivers it needs **privileged mode** (below). The bundled
+plugins upgrade with the package; the version is pinned in
+[`build.sh`](build.sh) (`CNI_PLUGINS_VERSION`).
+
 ### Tailscale peering
 
 Selecting *Tailscale* in the wizard advertises the NAS's tailnet IP using a
