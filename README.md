@@ -260,6 +260,33 @@ the Nomad ports between cluster members: **4646/tcp** (HTTP API), **4647/tcp**
 firewall, so add these rules under **Control Panel → Security → Firewall** if
 you have it enabled.
 
+### Publishing Nomad services as Tailscale Services
+
+The companion project
+[tailscale-nomad](https://github.com/SierraSoftworks/tailscale-nomad)
+provides **nomad-tailscale-connector**, a daemon (deployed as a Nomad system
+job, not part of the SPK) that publishes tagged Nomad services as
+[Tailscale Services](https://tailscale.com/docs/features/tailscale-services).
+Add Traefik-style tags to a service block:
+
+```hcl
+service {
+  name     = "whoami"
+  port     = "http"
+  provider = "nomad"
+  tags     = ["tailscale.enable=true", "tailscale.https=443"]
+}
+```
+
+and `https://whoami.<tailnet>.ts.net` routes to that allocation. The
+connector is a self-contained [tsnet](https://tailscale.com/docs/reference/tsnet-server-api)
+node that hosts the Service and proxies its traffic — it needs no Tailscale
+package on the NAS — and it withdraws advertisements gracefully when a
+service stops, redeploys, or drains. It works well alongside this package
+(deploy it via the exec driver in privileged mode); see the
+[setup guide](https://github.com/SierraSoftworks/tailscale-nomad/blob/main/docs/tailscale-services.md)
+for details.
+
 ## Uninstalling
 
 Uninstalling removes the package and binaries. Configuration under
