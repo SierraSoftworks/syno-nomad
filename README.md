@@ -284,7 +284,7 @@ node that hosts the Service and proxies its traffic — it needs no Tailscale
 package on the NAS — and it withdraws advertisements gracefully when a
 service stops, redeploys, or drains. It works well alongside this package
 (deploy it via the exec driver in privileged mode); see the
-[setup guide](https://github.com/SierraSoftworks/tailscale-nomad/blob/main/docs/tailscale-services.md)
+[setup guide](https://github.com/SierraSoftworks/tailscale-nomad#readme)
 for details.
 
 ## Uninstalling
