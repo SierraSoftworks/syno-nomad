@@ -79,6 +79,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wrapper/go.mod
+
       - name: Build SPK
         run: ./build.sh "${{ needs.check.outputs.version }}" "${{ matrix.arch }}" "${{ needs.check.outputs.revision }}"
 

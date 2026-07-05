@@ -12,10 +12,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wrapper/go.mod
+
       - name: Shellcheck package scripts
         run: |
           shellcheck --shell=sh spk/scripts/* spk/package/share/*.sh
           shellcheck build.sh
+
+      - name: Vet privilege wrapper
+        run: cd wrapper && go vet ./... && gofmt -l . | (! grep .)
 
       - name: Validate JSON and wizard definitions
         run: |
@@ -30,6 +37,10 @@ jobs:
         arch: [x86_64, aarch64]
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: wrapper/go.mod
 
       - name: Build SPK
         run: ./build.sh "$(cat VERSION)" "${{ matrix.arch }}"

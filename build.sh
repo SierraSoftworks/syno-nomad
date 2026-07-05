@@ -82,6 +82,18 @@ chmod 0755 "${PAYLOAD}"/share/*.sh
 # without root-owned /opt/cni/bin (the installer runs as the package user).
 tar -xzf "${WORK}/${CNI_TGZ}" -C "${PAYLOAD}/cni/bin"
 
+# Build the setuid-root launcher that runs Nomad as real root (needed by the
+# Docker and exec drivers; see wrapper/main.go).
+echo "==> Compiling privilege wrapper (nomad-root)"
+if ! command -v go > /dev/null; then
+    echo "go is required to build the privilege wrapper (wrapper/)" >&2
+    exit 1
+fi
+mkdir -p "${PAYLOAD}/libexec"
+(cd "${ROOT}/wrapper" && GOOS=linux GOARCH="${NOMAD_ARCH}" CGO_ENABLED=0 \
+    go build -trimpath -ldflags='-s -w' -o "${PAYLOAD}/libexec/nomad-root" .)
+chmod 0755 "${PAYLOAD}/libexec/nomad-root"
+
 SPKROOT="${WORK}/spkroot"
 mkdir -p "$SPKROOT"
 "$TAR" "${TAR_OWNER[@]}" -czf "${SPKROOT}/package.tgz" -C "$PAYLOAD" .

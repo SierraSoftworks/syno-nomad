@@ -78,10 +78,15 @@ Docker and isolated exec drivers do not work** — they need privileges DSM will
 not hand a package. Nomad may even show as stopped in Package Center until you
 complete the opt-in step below.
 
-To run real workloads, opt into **privileged mode**, which makes the Nomad
-binary setuid-root so the agent runs with full privileges (the same class of
-approach Tailscale and WireGuard use on DSM 7). This is a deliberate, explicit
-step — the package never escalates on its own.
+To run real workloads, opt into **privileged mode**. This makes a small bundled
+launcher (`target/libexec/nomad-root`) setuid-root; it raises Nomad to **real
+root** (real uid 0, not just effective) and exec's it. Real root gives the
+Docker driver access to `/var/run/docker.sock` and the exec driver a clean root
+environment for its chroot/cgroup/namespace setup, avoiding the
+effective-vs-real-uid pitfalls that surface when only euid is 0. This is a
+deliberate, explicit step — the package never escalates on its own, and the
+launcher only ever starts Nomad (with `LD_*` stripped and execute restricted to
+the package group).
 
 **Enable privileged mode (one time):**
 
@@ -91,12 +96,16 @@ step — the package never escalates on its own.
    ```sh
    /var/packages/nomad/target/share/enable-privileges.sh
    ```
-4. Select the task and click **Run** to apply it now (it also re-runs on every
-   boot). Nomad restarts automatically and now runs as root.
+4. Select the task and click **Run** to apply it now. Nomad restarts
+   automatically and now runs as root.
 
-The setuid bit survives reboots; the boot task exists so it is re-applied after
-a package **upgrade** replaces the binary (the package also re-applies it
-automatically on upgrade once you have opted in). To check or revert over SSH:
+The setuid launcher lives in the package's persistent `var/` directory
+(`@appdata`), which package upgrades do **not** replace — so **privileged mode
+survives upgrades automatically**, including the automatic Nomad-version
+releases, with no action needed. The boot task is a lightweight safety net: on
+each boot it re-installs the launcher only if it's missing or stale (a no-op
+otherwise), and refreshes it to the version shipped in the latest package. To
+check or revert over SSH:
 
 ```sh
 sudo /var/packages/nomad/target/share/enable-privileges.sh status
