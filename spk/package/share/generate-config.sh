@@ -137,13 +137,6 @@ EOF
 client {
   enabled    = true
   node_class = "synology"
-
-  # CNI reference plugins are bundled with the package (target/cni/bin) so
-  # bridge networking and CNI networks work without a root-owned /opt/cni/bin.
-  # Drop CNI network config (*.conflist) into cni_config_dir; it persists
-  # across upgrades.
-  cni_path       = "/var/packages/nomad/target/cni/bin"
-  cni_config_dir = "/var/packages/nomad/etc/cni"
 EOF
     if [ "$CLIENT_ONLY" = "true" ]; then
         cat <<EOF

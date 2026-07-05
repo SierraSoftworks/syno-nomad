@@ -191,29 +191,51 @@ package data directory, which needs neither. The `mkdir` plugin does not
 enforce `capacity_min`/`capacity_max` — size is bounded only by the underlying
 Synology volume.
 
-### Bridge networking (CNI)
+### Networking
 
-The [CNI reference plugins](https://github.com/containernetworking/plugins)
-(v1.6.2) are bundled with the package at
-`/var/packages/nomad/target/cni/bin`, and the config points Nomad's
-`client { cni_path = "..." }` there — so Nomad's `bridge` network mode and CNI
-networks work without a root-owned `/opt/cni/bin` (which the unprivileged
-installer can't create). CNI network definitions (`*.conflist`) go in
-`cni_config_dir` at `/var/packages/nomad/etc/cni`, which persists across
-upgrades.
+**Nomad's CNI bridge mode (`network { mode = "bridge" }`) does not work on
+Synology** and is not supported by this package. Nomad's bridge networking
+relies on the CNI reference plugins, which tag their `iptables` rules with the
+`-m comment` match — and Synology ships a stripped-down `iptables` (v1.8.3
+legacy) that lacks the `comment` module, so CNI setup fails with
+`Couldn't load match 'comment'`. This is a platform limitation, not something
+the package can fix. Use one of these instead:
 
-```hcl
-# in a job's group block
-network {
-  mode = "bridge"
-  port "http" { to = 8080 }
-}
-```
+- **Host networking** — put the group in host mode and, for Docker tasks, set
+  the driver's `network_mode` to `host` (the group `network { mode = "host" }`
+  alone does not make the container use host networking):
 
-Bridge networking sets up network namespaces and iptables rules, so like the
-Docker and exec drivers it needs **privileged mode** (below). The bundled
-plugins upgrade with the package; the version is pinned in
-[`build.sh`](build.sh) (`CNI_PLUGINS_VERSION`).
+  ```hcl
+  group "app" {
+    network {
+      mode = "host"
+      port "http" { static = 8080 }
+    }
+    task "server" {
+      driver = "docker"
+      config {
+        image        = "nginx"
+        network_mode = "host"
+      }
+    }
+  }
+  ```
+
+- **Docker's own bridge** (Docker tasks only) — set `network_mode = "bridge"`
+  in the Docker driver config. This uses the Docker daemon's networking, whose
+  `iptables` rules don't need the `comment` match, so it works where Nomad's
+  CNI bridge doesn't:
+
+  ```hcl
+  task "server" {
+    driver = "docker"
+    config {
+      image        = "nginx"
+      network_mode = "bridge"
+      ports        = ["http"]
+    }
+  }
+  ```
 
 ### Tailscale peering
 

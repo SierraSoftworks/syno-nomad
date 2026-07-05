@@ -12,9 +12,6 @@ NOMAD_VERSION="${1:?usage: build.sh <nomad-version> <x86_64|aarch64> [revision]}
 SYNO_ARCH="${2:?usage: build.sh <nomad-version> <x86_64|aarch64> [revision]}"
 REVISION="${3:-1}"
 
-# CNI reference plugins bundled under the package (see Nomad's CNI docs).
-CNI_PLUGINS_VERSION="${CNI_PLUGINS_VERSION:-v1.6.2}"
-
 case "$SYNO_ARCH" in
     x86_64) NOMAD_ARCH="amd64" ;;
     aarch64) NOMAD_ARCH="arm64" ;;
@@ -63,24 +60,13 @@ curl -fsSL --retry 3 -o "${WORK}/SHA256SUMS" "${BASE_URL}/nomad_${NOMAD_VERSION}
 
 unzip -qo "${WORK}/${ZIP}" -d "${WORK}/unpacked"
 
-echo "==> Downloading CNI plugins ${CNI_PLUGINS_VERSION} (linux/${NOMAD_ARCH})"
-CNI_TGZ="cni-plugins-linux-${NOMAD_ARCH}-${CNI_PLUGINS_VERSION}.tgz"
-CNI_URL="https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/${CNI_TGZ}"
-curl -fsSL --retry 3 -o "${WORK}/${CNI_TGZ}" "$CNI_URL"
-curl -fsSL --retry 3 -o "${WORK}/${CNI_TGZ}.sha256" "${CNI_URL}.sha256"
-(cd "$WORK" && sha256_check < "${CNI_TGZ}.sha256")
-
 echo "==> Assembling package.tgz"
 PAYLOAD="${WORK}/payload"
-mkdir -p "${PAYLOAD}/bin" "${PAYLOAD}/cni/bin"
+mkdir -p "${PAYLOAD}/bin"
 cp -R "${ROOT}/spk/package/." "$PAYLOAD/"
 cp "${WORK}/unpacked/nomad" "${PAYLOAD}/bin/nomad"
 chmod 0755 "${PAYLOAD}/bin/nomad"
 chmod 0755 "${PAYLOAD}"/share/*.sh
-
-# Bundle the CNI plugin binaries at target/cni/bin so Nomad can use them
-# without root-owned /opt/cni/bin (the installer runs as the package user).
-tar -xzf "${WORK}/${CNI_TGZ}" -C "${PAYLOAD}/cni/bin"
 
 # Build the setuid-root launcher that runs Nomad as real root (needed by the
 # Docker and exec drivers; see wrapper/main.go).
