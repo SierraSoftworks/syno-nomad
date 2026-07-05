@@ -1,3 +1,7 @@
 dist/
 *.spk
 .DS_Store
+
+# Compiled connector binaries
+connector/connector
+connector/nomad-tailscale-connector

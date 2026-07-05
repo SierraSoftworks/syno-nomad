@@ -14,7 +14,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: wrapper/go.mod
+          go-version-file: connector/go.mod
 
       - name: Shellcheck package scripts
         run: |
@@ -23,6 +23,9 @@ jobs:
 
       - name: Vet privilege wrapper
         run: cd wrapper && go vet ./... && gofmt -l . | (! grep .)
+
+      - name: Vet & test Tailscale connector
+        run: cd connector && go vet ./... && gofmt -l . | (! grep .) && go test ./...
 
       - name: Validate JSON and wizard definitions
         run: |
